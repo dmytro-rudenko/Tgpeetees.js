@@ -11,14 +11,20 @@ class Tgpeetees {
         this.chatHistory = {};
         this.isSessionStart = {};
         this.DEFAULT_CHAT_GPT_CONFIG = {
-            model: "gpt-3.5-turbo",
+            model: "gpt-3.5-turbo-1106",
             temperature: 0.75,
             max_tokens: 745,
             top_p: 1,
             frequency_penalty: 0,
             presence_penalty: 0,
         };
-        this.bot = new telegraf_1.Telegraf(params.token);
+        this.bot = new telegraf_1.Telegraf(params.botToken);
+        if (params.openaiApiKey) {
+            this.addChatGpt(params.openaiApiKey);
+        }
+        if (params.model) {
+            this.model = params.model;
+        }
         this.bot.start(params.callback);
     }
     init() {
@@ -63,8 +69,12 @@ class Tgpeetees {
             role: "user",
             content: msg
         });
-        const response = await this.openai.chat.completions.create(Object.assign(Object.assign(Object.assign({}, this.DEFAULT_CHAT_GPT_CONFIG), queryParams), { messages: this.chatHistory[userId] }));
-        console.log("chatgpt answer:", response.choices[0].message);
+        const params = Object.assign(Object.assign(Object.assign({}, this.DEFAULT_CHAT_GPT_CONFIG), queryParams), { messages: this.chatHistory[userId] });
+        if (this.model) {
+            params.model = this.model;
+        }
+        const response = await this.openai.chat.completions.create(params);
+        // console.log("chatgpt answer:", response.choices[0].message)
         this.chatHistory[userId].push(response.choices[0].message);
         return response;
     }

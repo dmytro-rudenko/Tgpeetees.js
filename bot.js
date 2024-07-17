@@ -1,174 +1,108 @@
-const { Telegraf, Markup } = require("telegraf");
-const OpenAI = require("openai");
-const mongoose = require("mongoose");
+const { Tgpeetees } = require("tgpeetees");
+const { Markup } = require("telegraf");
 const dotenv = require("dotenv");
-const Translations = require("./translate");
 
 dotenv.config();
 
-const BOT_TOKEN = process.env.BOT_TOKEN;
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const LIMIT = 5;
-let lang = "EN";
-let Language = Translations[lang];
-
 const main = async () => {
-  const bot = new Telegraf(BOT_TOKEN);
-  const openai = new OpenAI({
-    apiKey: OPENAI_API_KEY,
-  });
-
-  // Обработка команды /start
-  bot.start((ctx) => {
-    ctx.reply(
-      Language.hi + "\n\n" + Language.help,
-      Markup.inlineKeyboard([Markup.button.callback(Language.share, "CONFESS")])
-    );
-  });
-
-  // Обработка команды /help
-  bot.help((ctx) => {
-    ctx.reply(Language.help);
-  });
-
-  const LanguageKeyboard = [
-    {
-      text: "EN 🇺🇸",
-      callback_data: "EN",
-    },
-    {
-      text: "UA 🇺🇦",
-      callback_data: "UA",
-    },
-  ];
-
-  bot.action(
-    LanguageKeyboard.map((key) => key.callback_data),
-    (ctx) => {
-      lang = ctx.match[0]; // get the selected language code
-      Language = Translations[lang]; // update the language
-      ctx.reply(Translations.selectedLanguage(lang));
-    }
-  );
-
-  // Обработка команды /Language
-  bot.command("language", (ctx) => {
-    const keyboard = [
-      Markup.button.callback("EN 🇺🇸", "EN"),
-      Markup.button.callback("UA 🇺🇦", "UA"),
-    ];
-
-    // Select Language from keyboard
-    ctx.reply(Language.selectLanguage, Markup.inlineKeyboard(keyboard));
-  });
-  const share = async (ctx) => {
-    const userId = ctx?.update?.callback_query
-      ? ctx.update.callback_query.from.id
-      : ctx.message.from.id;
-    let soul = await Soul.findOne({ userId });
-
-    if (soul) {
-      soul.limit++;
-      soul.state = true;
-      soul.usedAt = new Date();
-      await soul.save();
-    } else {
-      soul = new Soul({
-        userId,
-        state: true,
-        limit: 0,
-        usedAt: new Date(),
-      });
-      await soul.save();
-    }
-
-    if (soul?.limit > LIMIT) {
-      ctx.reply(Language.limit);
-
-      soul.state = false;
-      await soul.save();
-
-      return;
-    }
-
-    ctx.reply(Language.youCanShare);
-  };
-  // Обработка нажатия на кнопку "Исповедаться"
-  bot.action("CONFESS", share);
-  bot.command("share", share);
-
-  // Обработка текстовых сообщений
-  bot.on("text", async (ctx) => {
-    const userId = ctx.message.from.id;
-    let soul = await Soul.findOne({ userId });
-
-    if (!soul.state) {
-      ctx.reply(
-        Language.sorry,
-        Markup.inlineKeyboard([
-          Markup.button.callback(Language.share, "CONFESS"),
-        ])
-      );
-      return;
-    }
-
-    const userMessage = ctx.message.text;
-
-    // send message with please wait
-    bot.telegram.sendMessage(ctx.message.from.id, Language.pleaseWait);
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content: [
+  const startCallback = async (ctx) => {
+    const params = {
+      start: {
+        msg: "Hello",
+        keyboard: [
+          [
             {
-              type: "text",
-              text: Language.prompt,
+              text: "Start Chat Session",
+              callback_data: "START_CHAT_SESSION",
             },
+            { text: "End Chat Session", callback_data: "END_CHAT_SESSION" },
           ],
-        },
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: userMessage,
-            },
-          ],
-        },
-      ],
-      temperature: 0.75,
-      max_tokens: 745,
-      top_p: 1,
-      frequency_penalty: 0,
-      presence_penalty: 0,
+          [{ text: "Help", callback_data: "HELP" }],
+        ],
+      },
+    };
+    const userId = tgpeetees.getUserId(ctx);
+
+    tgpeetees.bot.on("message", async (ctx) => {
+      if (
+        !tgpeetees.isSessionStart[userId] ||
+        !tgpeetees.chatHistory?.[userId]?.length
+      ) {
+        ctx.reply(
+          "Session don't started. Call Start chat session before sendToChatGpt"
+        );
+
+        return;
+      }
+      const msg = ctx.message.text;
+
+      const response = await tgpeetees.sendToChatGpt(userId, msg);
+
+      if (!response) {
+        ctx.reply(
+          "Session don't started. Call Start chat session before sendToChatGpt"
+        );
+        return;
+      }
+
+      ctx.reply(response.choices[0].message.content);
     });
 
-    const responseText = response.choices[0].message.content;
+    ctx.reply(params.start.msg, Markup.inlineKeyboard(params.start?.keyboard));
+  };
 
-    soul.state = false;
-    await soul.save();
-
-    ctx.reply(
-      responseText,
-      Markup.inlineKeyboard([
-        Markup.button.callback(
-          `${Language.shareMore}${
-            soul.limit > 0 && soul.limit < LIMIT
-              ? " (" + (LIMIT - soul.limit) + ")"
-              : ""
-          }`,
-          "CONFESS"
-        ),
-      ])
-    );
+  const tgpeetees = new Tgpeetees({
+    botToken: process.env.BOT_TOKEN,
+    openaiApiKey: process.env.OPENAI_API_KEY,
+    model: "gpt-3.5-turbo-1106",
+    callback: startCallback,
   });
 
-  // Запуск бота
-  bot.launch();
+  tgpeetees.addBotAction({
+    name: "START_CHAT_SESSION",
+    callback: (ctx) => {
+      const userId = tgpeetees.getUserId(ctx);
 
+      tgpeetees.startGptSession(
+        userId,
+        "Imagine that you're a person who answers everything with poetry. Respond in the language in which the message arrives."
+      );
+
+      ctx.reply("Session starts");
+    },
+  });
+
+  tgpeetees.addBotAction({
+    name: "END_CHAT_SESSION",
+    callback: (ctx) => {
+      const userId = tgpeetees.getUserId(ctx);
+
+      tgpeetees.closeGptSession(userId);
+
+      ctx.reply("Session end");
+    },
+  });
+
+  const HELP_REPLY = `Info: 
+For start working bot call /start
+If bot don't work call /restart
+Hello, for help call /help`;
+
+  tgpeetees.addHelp(HELP_REPLY);
+
+  tgpeetees.addBotAction({
+    name: "HELP",
+    callback: (ctx) => {
+      ctx.reply(HELP_REPLY);
+    },
+  });
+
+  tgpeetees.addBotCommand({
+    name: "restart",
+    callback: startCallback,
+  });
+
+  tgpeetees.init();
 };
 
 main();

@@ -1,12 +1,15 @@
 export declare class Tgpeetees {
     bot: any;
     openai: any;
+    model: string;
     chatGptConfig: any;
     chatHistory: any;
     isSessionStart: any;
     DEFAULT_CHAT_GPT_CONFIG: any;
     constructor(params: {
-        token: string;
+        botToken: string;
+        openaiApiKey?: string;
+        model?: string;
         callback: any;
     });
     init(): any;

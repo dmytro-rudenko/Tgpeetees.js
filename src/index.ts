@@ -4,12 +4,13 @@ import OpenAI from "openai";
 export class Tgpeetees {
     bot: any
     openai: any
+    model: string
     chatGptConfig: any
     chatHistory: any = {}
     isSessionStart: any = {}
 
     DEFAULT_CHAT_GPT_CONFIG: any = {
-        model: "gpt-3.5-turbo",
+        model: "gpt-3.5-turbo-1106",
         temperature: 0.75,
         max_tokens: 745,
         top_p: 1,
@@ -17,10 +18,18 @@ export class Tgpeetees {
         presence_penalty: 0,
     }
     constructor(params: {
-        token: string,
+        botToken: string,
+        openaiApiKey: string
+        model?: string
         callback: any
     }) {
-        this.bot = new Telegraf(params.token);
+        this.bot = new Telegraf(params.botToken);
+
+        this.addChatGpt(params.openaiApiKey);
+
+        if (params.model) {
+            this.model = params.model
+        }
 
         this.bot.start(params.callback);
     }
@@ -86,16 +95,20 @@ export class Tgpeetees {
             content: msg
         })
 
+        const params = {
+            ...this.DEFAULT_CHAT_GPT_CONFIG,
+            ...queryParams,
+            messages: this.chatHistory[userId]
+        }
+
+        if (this.model) {
+            params.model = this.model
+        }
+
         const response = await this.openai.chat.completions.create(
-            {
-                ...this.DEFAULT_CHAT_GPT_CONFIG,
-                ...queryParams,
-                messages: this.chatHistory[userId]
-            }
+            params
         );
-
-
-        console.log("chatgpt answer:", response.choices[0].message)
+        // console.log("chatgpt answer:", response.choices[0].message)
 
         this.chatHistory[userId].push(response.choices[0].message);
 
