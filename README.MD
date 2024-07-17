@@ -20,7 +20,7 @@
 
 ## Usage
 
-Full example https://github.com/dmytro-rudenko/Tgpeetees.js/example
+Full example https://github.com/dmytro-rudenko/Tgpeetees.js/tree/main/example
 
 ### Example
 
