@@ -1,31 +1,4 @@
-# Tgpeetees.js - Telegram GPT Framework
-
-## Overview
-
-**Tgpeetees.js** is a framework for creating GPT-based chatbots in Telegram using Telegraf.js and OpenAI's GPT models. This framework simplifies the process of integrating OpenAI's language models into Telegram bots, providing a structure for managing chat sessions and interactions.
-
-## Features
-
-- Easy setup with Telegraf.js.
-- Integration with OpenAI's GPT models.
-- Session management for user interactions.
-- Customizable bot commands and actions.
-
-## Installation
-
-1. Install the dependencies using npm:
-   ```bash
-   npm install tgpeetees
-   ```
-
-## Usage
-
-Full example https://github.com/dmytro-rudenko/Tgpeetees.js/tree/main/example
-
-### Example
-
-```javascript
-const { Tgpeetees } = require("tgpeetees");
+const { Tgpeetees } = require("./index.js"); // Import the Tgpeetees class from the local index file
 const { Markup } = require("telegraf"); // Import the Markup class from telegraf for creating custom keyboards
 const dotenv = require("dotenv"); // Import dotenv for loading environment variables from a .env file
 
@@ -147,52 +120,3 @@ Hello, for help call /help`; // Help message to be sent to the user
 };
 
 main(); // Call the main function to start the bot
-```
-
-## Documentation
-
-### Class: Tgpeetees
-
-#### Constructor
-
-```typescript
-constructor(params: {
-  botToken: string,
-  openaiApiKey?: string,
-  model?: string,
-  callback: any
-})
-```
-
-- `botToken`: The Telegram bot token.
-- `openaiApiKey`: (Optional) OpenAI API key for GPT integration.
-- `model`: (Optional) GPT model to use.
-- `callback`: Callback function for bot start.
-
-#### Methods
-
-- `init()`: Initializes the bot and enables graceful stop.
-- `addHelp(msg: string, keyboard?: any)`: Adds a help command with a specified message and optional keyboard.
-- `addBotAction(action: { name: string, callback: any })`: Adds a bot action with a specified name and callback.
-- `addBotCommand(command: { name: string, callback: any })`: Adds a bot command with a specified name and callback.
-- `startGptSession(userId: string, systemMsg: string)`: Starts a GPT session for a user with an initial system message.
-- `sendToChatGpt(userId: string, msg: string, queryParams: any)`: Sends a message to GPT and returns the response.
-- `closeGptSession(userId: string)`: Closes the GPT session for a user.
-- `getUserId(ctx: any)`: Retrieves the user ID from the context.
-
-### Environment Variables
-
-- `BOT_TOKEN`: Your Telegram bot token.
-- `OPENAI_API_KEY`: Your OpenAI API key.
-
-## Contributing
-
-Feel free to submit issues, fork the repository and send pull requests!
-
-## License
-
-MIT License. See `LICENSE` file for details.
-
----
-
-This documentation provides an overview of the Tgpeetees.js framework, along with example usage and detailed method descriptions. For more detailed information, refer to the source code and comments within the implementation files.

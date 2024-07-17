@@ -43,11 +43,6 @@ class Tgpeetees {
     addBotCommand(command) {
         this.bot.command(command.name, command.callback);
     }
-    async addChatGpt(token) {
-        this.openai = new openai_1.default({
-            apiKey: token
-        });
-    }
     async startGptSession(userId, systemMsg) {
         var _a;
         if (!((_a = this.chatHistory) === null || _a === void 0 ? void 0 : _a[userId])) {
@@ -85,6 +80,11 @@ class Tgpeetees {
         return ((_a = ctx === null || ctx === void 0 ? void 0 : ctx.update) === null || _a === void 0 ? void 0 : _a.callback_query)
             ? ctx.update.callback_query.from.id
             : ctx.message.from.id;
+    }
+    async addChatGpt(token) {
+        this.openai = new openai_1.default({
+            apiKey: token
+        });
     }
 }
 exports.Tgpeetees = Tgpeetees;

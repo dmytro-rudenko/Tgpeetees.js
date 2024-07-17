@@ -34,7 +34,7 @@ export class Tgpeetees {
         this.bot.start(params.callback);
     }
 
-    init() {
+    public init() {
         // Enable graceful stop
         process.once("SIGINT", () => this.bot.stop("SIGINT"));
         process.once("SIGTERM", () => this.bot.stop("SIGTERM"));
@@ -44,33 +44,27 @@ export class Tgpeetees {
         return this.bot.launch();
     }
 
-    async addHelp(msg: string, keyboard?: any) {
+    public async addHelp(msg: string, keyboard?: any) {
         this.bot.help((ctx: Context) => {
             ctx.reply(msg, keyboard);
         });
     }
 
-    addBotAction(action: {
+    public addBotAction(action: {
         name: string
         callback: any
     }) {
         this.bot.action(action.name, action.callback)
     }
 
-    addBotCommand(command: {
+    public addBotCommand(command: {
         name: string
         callback: any
     }) {
         this.bot.command(command.name, command.callback)
     }
 
-    async addChatGpt(token: string) {
-        this.openai = new OpenAI({
-            apiKey: token
-        });
-    }
-
-    async startGptSession(userId: string, systemMsg: string) {
+    public async startGptSession(userId: string, systemMsg: string) {
         if (!this.chatHistory?.[userId]) {
             this.chatHistory[userId] = []
         }
@@ -85,7 +79,7 @@ export class Tgpeetees {
 
     }
 
-    async sendToChatGpt(userId: string, msg: string, queryParams: any = {}) {
+    public async sendToChatGpt(userId: string, msg: string, queryParams: any = {}) {
         if (this.chatHistory.length === 0) {
             return false
         }
@@ -115,14 +109,20 @@ export class Tgpeetees {
         return response
     }
 
-    closeGptSession(userId: string) {
+    public closeGptSession(userId: string) {
         this.chatHistory = []
         this.isSessionStart[userId] = false
     }
 
-    getUserId(ctx: any) {
+    public getUserId(ctx: any) {
         return ctx?.update?.callback_query
             ? ctx.update.callback_query.from.id
             : ctx.message.from.id
+    }
+
+    private async addChatGpt(token: string) {
+        this.openai = new OpenAI({
+            apiKey: token
+        });
     }
 }

@@ -22,9 +22,9 @@ export declare class Tgpeetees {
         name: string;
         callback: any;
     }): void;
-    addChatGpt(token: string): Promise<void>;
     startGptSession(userId: string, systemMsg: string): Promise<void>;
     sendToChatGpt(userId: string, msg: string, queryParams?: any): Promise<any>;
     closeGptSession(userId: string): void;
     getUserId(ctx: any): any;
+    private addChatGpt;
 }
