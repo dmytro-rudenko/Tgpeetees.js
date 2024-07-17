@@ -19,16 +19,18 @@ export class Tgpeetees {
     }
     constructor(params: {
         botToken: string,
-        openaiApiKey: string
+        openaiApiKey?: string
         model?: string
         callback: any
     }) {
         this.bot = new Telegraf(params.botToken);
 
-        this.addChatGpt(params.openaiApiKey);
-
         if (params.model) {
             this.model = params.model
+        }
+
+        if (params.openaiApiKey) {
+            this.addChatGpt(params.openaiApiKey)
         }
 
         this.bot.start(params.callback);
@@ -65,6 +67,10 @@ export class Tgpeetees {
     }
 
     public async startGptSession(userId: string, systemMsg: string) {
+        if (!this.openai) {
+            throw new Error("OpenAI API key not set");
+        }
+
         if (!this.chatHistory?.[userId]) {
             this.chatHistory[userId] = []
         }

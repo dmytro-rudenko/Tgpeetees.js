@@ -19,9 +19,11 @@ class Tgpeetees {
             presence_penalty: 0,
         };
         this.bot = new telegraf_1.Telegraf(params.botToken);
-        this.addChatGpt(params.openaiApiKey);
         if (params.model) {
             this.model = params.model;
+        }
+        if (params.openaiApiKey) {
+            this.addChatGpt(params.openaiApiKey);
         }
         this.bot.start(params.callback);
     }
@@ -45,6 +47,9 @@ class Tgpeetees {
     }
     async startGptSession(userId, systemMsg) {
         var _a;
+        if (!this.openai) {
+            throw new Error("OpenAI API key not set");
+        }
         if (!((_a = this.chatHistory) === null || _a === void 0 ? void 0 : _a[userId])) {
             this.chatHistory[userId] = [];
         }
