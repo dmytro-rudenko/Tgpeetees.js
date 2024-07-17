@@ -8,7 +8,7 @@ export declare class Tgpeetees {
     DEFAULT_CHAT_GPT_CONFIG: any;
     constructor(params: {
         botToken: string;
-        openaiApiKey?: string;
+        openaiApiKey: string;
         model?: string;
         callback: any;
     });

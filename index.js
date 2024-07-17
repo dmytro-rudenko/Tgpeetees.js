@@ -19,9 +19,7 @@ class Tgpeetees {
             presence_penalty: 0,
         };
         this.bot = new telegraf_1.Telegraf(params.botToken);
-        if (params.openaiApiKey) {
-            this.addChatGpt(params.openaiApiKey);
-        }
+        this.addChatGpt(params.openaiApiKey);
         if (params.model) {
             this.model = params.model;
         }

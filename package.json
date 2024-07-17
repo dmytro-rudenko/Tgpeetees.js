@@ -12,9 +12,9 @@
   "author": "https://dmytro-rudenko.github.io/",
   "repository": {
     "type": "git",
-    "url": "git://github.com/dmytro-rudenko/pptr-gpt.git"
+    "url": "git://github.com/dmytro-rudenko/Tgpeetees.js.git"
   },
-  "homepage": "https://github.com/dmytro-rudenko/pptr-gpt#readme",
+  "homepage": "https://github.com/dmytro-rudenko/Tgpeetees.js#readme",
   "license": "MIT",
   "dependencies": {
     "dotenv": "^16.4.5",
