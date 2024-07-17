@@ -10,7 +10,12 @@
   },
   "keywords": [],
   "author": "https://dmytro-rudenko.github.io/",
-  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/dmytro-rudenko/pptr-gpt.git"
+  },
+  "homepage": "https://github.com/dmytro-rudenko/pptr-gpt#readme",
+  "license": "MIT",
   "dependencies": {
     "dotenv": "^16.4.5",
     "openai": "^4.52.7",

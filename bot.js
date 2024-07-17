@@ -36,7 +36,10 @@ const main = async () => {
       }
       const msg = ctx.message.text;
 
-      const response = await tgpeetees.sendToChatGpt(userId, msg);
+      const response = await tgpeetees.sendToChatGpt(userId, msg, {
+        temperature: 0.5,
+        max_tokens: 1000, 
+      });
 
       if (!response) {
         ctx.reply(
