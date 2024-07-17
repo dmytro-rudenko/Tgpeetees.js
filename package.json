@@ -1,6 +1,6 @@
 {
   "name": "tgpeetees",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -19,7 +19,8 @@
   "dependencies": {
     "dotenv": "^16.4.5",
     "openai": "^4.52.7",
-    "telegraf": "^4.16.3"
+    "telegraf": "^4.16.3",
+    "tgpeetees": "^0.0.1"
   },
   "devDependencies": {
     "ts-node": "^10.9.2",

@@ -1,4 +1,4 @@
-const { Tgpeetees } = require("./index"); // Import the Tgpeetees class from the local index file
+const { Tgpeetees } = require("tgpeetees"); // Import the Tgpeetees class from the local index file
 const { Markup } = require("telegraf"); // Import the Markup class from telegraf for creating custom keyboards
 const dotenv = require("dotenv"); // Import dotenv for loading environment variables from a .env file
 

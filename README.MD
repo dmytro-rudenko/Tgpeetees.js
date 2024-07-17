@@ -20,6 +20,8 @@
 
 ## Usage
 
+Full example https://github.com/dmytro-rudenko/Tgpeetees.js/example
+
 ### Example
 
 ```javascript
