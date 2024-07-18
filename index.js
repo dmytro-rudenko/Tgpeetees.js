@@ -79,8 +79,9 @@ class Tgpeetees {
         await this.db.write(store);
     }
     async sendToChatGpt(userId, msg, queryParams = {}) {
+        var _a;
         const store = await this.db.read();
-        if (!store.isSessionStart[userId] && !store.chatHistory[userId].length) {
+        if (!store.isSessionStart[userId] && !((_a = store.chatHistory[userId]) === null || _a === void 0 ? void 0 : _a.length)) {
             return false;
         }
         store.chatHistory[userId].push({

@@ -115,7 +115,7 @@ export class Tgpeetees {
     public async sendToChatGpt(userId: string, msg: string, queryParams: any = {}) {
         const store = await this.db.read()
 
-        if (!store.isSessionStart[userId] && !store.chatHistory[userId].length) {
+        if (!store.isSessionStart[userId] && !store.chatHistory[userId]?.length) {
             return false
         }
 
