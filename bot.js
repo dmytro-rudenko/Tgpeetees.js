@@ -82,7 +82,7 @@ Hello, for help call /help`; // Help message to be sent to the user
 
     if (!store.isSessionStart[userId] || !store.chatHistory?.[userId]?.length) {
       ctx.reply(
-        "Session don't started. Call Start chat session before sendToChatGpt",
+        "Session don't started. Call Start chat session before writing",
         Markup.inlineKeyboard([
           {
             text: "Start Chat Session",
