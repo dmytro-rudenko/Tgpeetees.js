@@ -148,8 +148,8 @@ export class Tgpeetees {
     public async closeGptSession(userId: string) {
         const store = await this.db.read()
 
-        store.chatHistory[userId] = []
-        store.isSessionStart[userId] = false
+        delete store.chatHistory[userId]
+        delete store.isSessionStart[userId]
 
         await this.db.write(store)
     }

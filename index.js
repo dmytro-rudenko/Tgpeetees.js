@@ -66,6 +66,7 @@ class Tgpeetees {
         if (!this.openai) {
             throw new Error("OpenAI API key not set");
         }
+        this.closeGptSession(userId);
         const store = await this.db.read();
         if (!((_a = store.chatHistory) === null || _a === void 0 ? void 0 : _a[userId])) {
             store.chatHistory[userId] = [];
@@ -97,8 +98,8 @@ class Tgpeetees {
     }
     async closeGptSession(userId) {
         const store = await this.db.read();
-        store.chatHistory[userId] = [];
-        store.isSessionStart[userId] = false;
+        delete store.chatHistory[userId];
+        delete store.isSessionStart[userId];
         await this.db.write(store);
     }
     getUserId(ctx) {
