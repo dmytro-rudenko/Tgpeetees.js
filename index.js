@@ -6,10 +6,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Tgpeetees = void 0;
 const telegraf_1 = require("telegraf");
 const openai_1 = __importDefault(require("openai"));
+const path_1 = __importDefault(require("path"));
+const fs_json_store_1 = require("fs-json-store");
 class Tgpeetees {
     constructor(params) {
         this.chatHistory = {};
         this.isSessionStart = {};
+        this.dbName = "db.json";
         this.DEFAULT_CHAT_GPT_CONFIG = {
             model: "gpt-3.5-turbo-1106",
             temperature: 0.75,
@@ -25,12 +28,25 @@ class Tgpeetees {
         if (params.openaiApiKey) {
             this.addChatGpt(params.openaiApiKey);
         }
+        if (params.databaseName) {
+            this.dbName = params.databaseName;
+        }
+        this.db = new fs_json_store_1.Store({
+            file: path_1.default.join(process.cwd(), this.dbName)
+        });
         this.bot.start(params.callback);
     }
-    init() {
+    async init() {
         // Enable graceful stop
         process.once("SIGINT", () => this.bot.stop("SIGINT"));
         process.once("SIGTERM", () => this.bot.stop("SIGTERM"));
+        const store = await this.db.read();
+        if (!(store === null || store === void 0 ? void 0 : store.isSessionStart) && !(store === null || store === void 0 ? void 0 : store.chatHistory)) {
+            await this.db.write({
+                chatHistory: {},
+                isSessionStart: {}
+            });
+        }
         console.log("Bot started");
         return this.bot.launch();
     }
@@ -50,35 +66,40 @@ class Tgpeetees {
         if (!this.openai) {
             throw new Error("OpenAI API key not set");
         }
-        if (!((_a = this.chatHistory) === null || _a === void 0 ? void 0 : _a[userId])) {
-            this.chatHistory[userId] = [];
+        const store = await this.db.read();
+        if (!((_a = store.chatHistory) === null || _a === void 0 ? void 0 : _a[userId])) {
+            store.chatHistory[userId] = [];
         }
-        this.chatHistory[userId].push({
+        store.chatHistory[userId].push({
             role: "system",
             content: systemMsg
         });
-        this.isSessionStart[userId] = true;
+        store.isSessionStart[userId] = true;
+        await this.db.write(store);
     }
     async sendToChatGpt(userId, msg, queryParams = {}) {
-        if (this.chatHistory.length === 0) {
+        const store = await this.db.read();
+        if (!store.isSessionStart[userId] && !store.chatHistory[userId].length) {
             return false;
         }
-        this.chatHistory[userId].push({
+        store.chatHistory[userId].push({
             role: "user",
             content: msg
         });
-        const params = Object.assign(Object.assign(Object.assign({}, this.DEFAULT_CHAT_GPT_CONFIG), queryParams), { messages: this.chatHistory[userId] });
+        const params = Object.assign(Object.assign(Object.assign({}, this.DEFAULT_CHAT_GPT_CONFIG), queryParams), { messages: store.chatHistory[userId] });
         if (this.model) {
             params.model = this.model;
         }
         const response = await this.openai.chat.completions.create(params);
-        // console.log("chatgpt answer:", response.choices[0].message)
-        this.chatHistory[userId].push(response.choices[0].message);
+        store.chatHistory[userId].push(response.choices[0].message);
+        await this.db.write(store);
         return response;
     }
-    closeGptSession(userId) {
-        this.chatHistory = [];
-        this.isSessionStart[userId] = false;
+    async closeGptSession(userId) {
+        const store = await this.db.read();
+        store.chatHistory[userId] = [];
+        store.isSessionStart[userId] = false;
+        await this.db.write(store);
     }
     getUserId(ctx) {
         var _a;

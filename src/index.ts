@@ -1,5 +1,7 @@
-import { Telegraf, Context, Markup } from "telegraf";
+import { Telegraf, Context } from "telegraf";
 import OpenAI from "openai";
+import path from "path";
+import { Store } from "fs-json-store";
 
 export class Tgpeetees {
     bot: any
@@ -8,6 +10,8 @@ export class Tgpeetees {
     chatGptConfig: any
     chatHistory: any = {}
     isSessionStart: any = {}
+    dbName: string = "db.json"
+    db: any
 
     DEFAULT_CHAT_GPT_CONFIG: any = {
         model: "gpt-3.5-turbo-1106",
@@ -21,6 +25,7 @@ export class Tgpeetees {
         botToken: string,
         openaiApiKey?: string
         model?: string
+        databaseName?: string
         callback: any
     }) {
         this.bot = new Telegraf(params.botToken);
@@ -33,13 +38,31 @@ export class Tgpeetees {
             this.addChatGpt(params.openaiApiKey)
         }
 
+        if (params.databaseName) {
+            this.dbName = params.databaseName
+        }
+
+
+        this.db = new Store({
+            file: path.join(process.cwd(), this.dbName)
+        });
+
         this.bot.start(params.callback);
     }
 
-    public init() {
+    public async init() {
         // Enable graceful stop
         process.once("SIGINT", () => this.bot.stop("SIGINT"));
         process.once("SIGTERM", () => this.bot.stop("SIGTERM"));
+
+        const store = await this.db.read()
+
+        if (!store?.isSessionStart && !store?.chatHistory) {
+            await this.db.write({
+                chatHistory: {},
+                isSessionStart: {}
+            });
+        }
 
         console.log("Bot started")
 
@@ -71,26 +94,30 @@ export class Tgpeetees {
             throw new Error("OpenAI API key not set");
         }
 
-        if (!this.chatHistory?.[userId]) {
-            this.chatHistory[userId] = []
+        const store = await this.db.read()
+
+        if (!store.chatHistory?.[userId]) {
+            store.chatHistory[userId] = []
         }
 
-        this.chatHistory[userId].push({
+        store.chatHistory[userId].push({
             role: "system",
             content: systemMsg
         })
 
-        this.isSessionStart[userId] = true
+        store.isSessionStart[userId] = true
 
-
+        await this.db.write(store)
     }
 
     public async sendToChatGpt(userId: string, msg: string, queryParams: any = {}) {
-        if (this.chatHistory.length === 0) {
+        const store = await this.db.read()
+
+        if (!store.isSessionStart[userId] && !store.chatHistory[userId].length) {
             return false
         }
 
-        this.chatHistory[userId].push({
+        store.chatHistory[userId].push({
             role: "user",
             content: msg
         })
@@ -98,7 +125,7 @@ export class Tgpeetees {
         const params = {
             ...this.DEFAULT_CHAT_GPT_CONFIG,
             ...queryParams,
-            messages: this.chatHistory[userId]
+            messages: store.chatHistory[userId]
         }
 
         if (this.model) {
@@ -108,16 +135,21 @@ export class Tgpeetees {
         const response = await this.openai.chat.completions.create(
             params
         );
-        // console.log("chatgpt answer:", response.choices[0].message)
 
-        this.chatHistory[userId].push(response.choices[0].message);
+        store.chatHistory[userId].push(response.choices[0].message);
+
+        await this.db.write(store)
 
         return response
     }
 
-    public closeGptSession(userId: string) {
-        this.chatHistory = []
-        this.isSessionStart[userId] = false
+    public async closeGptSession(userId: string) {
+        const store = await this.db.read()
+
+        store.chatHistory[userId] = []
+        store.isSessionStart[userId] = false
+
+        await this.db.write(store)
     }
 
     public getUserId(ctx: any) {

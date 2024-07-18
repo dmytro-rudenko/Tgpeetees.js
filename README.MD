@@ -32,6 +32,13 @@ const dotenv = require("dotenv"); // Import dotenv for loading environment varia
 dotenv.config(); // Load environment variables from the .env file
 
 const main = async () => {
+const { Tgpeetees } = require("./index.js"); // Import the Tgpeetees class from the local index file
+const { Markup } = require("telegraf"); // Import the Markup class from telegraf for creating custom keyboards
+const dotenv = require("dotenv"); // Import dotenv for loading environment variables from a .env file
+
+dotenv.config(); // Load environment variables from the .env file
+
+const main = async () => {
   // Main function to run the bot
   const tgpeetees = new Tgpeetees({
     botToken: process.env.BOT_TOKEN, // Get the bot token from the environment variables
@@ -45,6 +52,7 @@ const main = async () => {
     name: "START_CHAT_SESSION",
     callback: (ctx) => {
       const userId = tgpeetees.getUserId(ctx); // Get the user ID from the context
+      tgpeetees.closeGptSession(userId);
 
       // Start a GPT session for the user, setting the bot to respond in poetry
       tgpeetees.startGptSession(
@@ -89,7 +97,59 @@ Hello, for help call /help`; // Help message to be sent to the user
     callback: startCallback, // Restart the bot using the startCallback function
   });
 
-  tgpeetees.init(); // Initialize the bot
+  // Handle incoming messages
+  tgpeetees.bot.on("message", async (ctx) => {
+    await ctx.telegram.sendChatAction(ctx.chat.id, "typing");
+
+    const userId = tgpeetees.getUserId(ctx); // Get the user ID from the context
+    const store = await tgpeetees.db.read();
+
+    if (!store.isSessionStart[userId] || !store.chatHistory?.[userId]?.length) {
+      ctx.reply(
+        "Session don't started. Call Start chat session before sendToChatGpt",
+        Markup.inlineKeyboard([
+          {
+            text: "Start Chat Session",
+            callback_data: "START_CHAT_SESSION", // Callback data for starting a chat session
+          },
+        ])
+        // Callback data for help
+      );
+
+      return;
+    }
+    const msg = ctx.message.text; // Get the message text from the context
+
+    const response = await tgpeetees.sendToChatGpt(userId, msg, {
+      temperature: 0.5,
+      max_tokens: 1000,
+    }); // Send the message to ChatGPT and get the response
+
+    if (!response) {
+      ctx.reply(
+        "Session don't started. Call Start session",
+        Markup.inlineKeyboard([
+          {
+            text: "Start Chat Session",
+            callback_data: "START_CHAT_SESSION", // Callback data for starting a chat session
+          },
+        ])
+      );
+      return;
+    }
+
+    ctx.reply(
+      response.choices[0].message.content,
+      Markup.inlineKeyboard([
+        {
+          text: "End Chat Session",
+          callback_data: "END_CHAT_SESSION", // Callback data for starting a chat session
+        },
+      ])
+    ); // Reply with the ChatGPT response
+  });
+
+  await tgpeetees.init(); // Initialize the bot
 
   function startCallback(ctx) {
     // Callback function to be called when the bot starts
@@ -111,37 +171,6 @@ Hello, for help call /help`; // Help message to be sent to the user
         ],
       },
     };
-    const userId = tgpeetees.getUserId(ctx); // Get the user ID from the context
-
-    // Handle incoming messages
-    tgpeetees.bot.on("message", async (ctx) => {
-      if (
-        !tgpeetees.isSessionStart[userId] ||
-        !tgpeetees.chatHistory?.[userId]?.length
-      ) {
-        ctx.reply(
-          "Session don't started. Call Start chat session before sendToChatGpt"
-        );
-
-        return;
-      }
-      const msg = ctx.message.text; // Get the message text from the context
-
-      const response = await tgpeetees.sendToChatGpt(userId, msg, {
-        temperature: 0.5,
-        max_tokens: 1000,
-      }); // Send the message to ChatGPT and get the response
-
-      if (!response) {
-        ctx.reply(
-          "Session don't started. Call Start chat session before sendToChatGpt"
-        );
-        return;
-      }
-
-      ctx.reply(response.choices[0].message.content); // Reply with the ChatGPT response
-    });
-
     ctx.reply(params.start.msg, Markup.inlineKeyboard(params.start?.keyboard)); // Send the start message with an inline keyboard
   }
 };
