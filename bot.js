@@ -1,155 +1,218 @@
-const { Tgpeetees } = require("./index.js"); // Import the Tgpeetees class from the local index file
-const { Markup } = require("telegraf"); // Import the Markup class from telegraf for creating custom keyboards
+const { Tgpeetees } = require("./index");
+const axios = require("axios");
+const cheerio = require("cheerio");
 const dotenv = require("dotenv"); // Import dotenv for loading environment variables from a .env file
 
-dotenv.config(); // Load environment variables from the .env file
+dotenv.config();
 
 const main = async () => {
-  // Main function to run the bot
+  console.log("main init");
   const tgpeetees = new Tgpeetees({
-    botToken: process.env.BOT_TOKEN, // Get the bot token from the environment variables
-    openaiApiKey: process.env.OPENAI_API_KEY, // Get the OpenAI API key from the environment variables
-    model: "gpt-3.5-turbo-1106", // Set the OpenAI model to use
-    callback: startCallback, // Set the startCallback function to be called on bot start
+    botToken: process.env.BOT_TOKEN,
+    openaiApiKey: process.env.OPENAI_API_KEY,
+    model: "gpt-4o",
   });
 
-  // Add an action to start a chat session
-  tgpeetees.addBotAction({
-    name: "START_CHAT_SESSION",
-    callback: (ctx) => {
-      const userId = tgpeetees.getUserId(ctx); // Get the user ID from the context
-      tgpeetees.closeGptSession(userId);
-
-      // Start a GPT session for the user, setting the bot to respond in poetry
-      tgpeetees.startGptSession(
-        userId,
-        "Imagine that you're a person who answers everything with poetry. Respond in the language in which the message arrives."
-      );
-
-      ctx.reply("Session starts", Markup.inlineKeyboard([
-        {
-          text: "End Chat Session",
-          callback_data: "END_CHAT_SESSION", // Callback data for starting a chat session
-        },
-      ])); // Reply to the user that the session has started
-    },
-  });
-
-  // Add an action to end a chat session
-  tgpeetees.addBotAction({
-    name: "END_CHAT_SESSION",
-    callback: (ctx) => {
-      const userId = tgpeetees.getUserId(ctx); // Get the user ID from the context
-
-      tgpeetees.closeGptSession(userId); // Close the GPT session for the user
-
-      ctx.reply("Session end", Markup.inlineKeyboard([
-        {
-          text: "Start Chat Session",
-          callback_data: "START_CHAT_SESSION", // Callback data for starting a chat session
-        },
-      ])); // Reply to the user that the session has ended
-    },
-  });
-
-  const HELP_REPLY = `Info: 
-For start working bot call /start
-If bot don't work call /restart
-Hello, for help call /help`; // Help message to be sent to the user
-
-  tgpeetees.addHelp(HELP_REPLY); // Add the help message to the bot
-
-  // Add an action to provide help
-  tgpeetees.addBotAction({
-    name: "HELP",
-    callback: (ctx) => {
-      ctx.reply(HELP_REPLY); // Reply with the help message
-    },
-  });
-
-  // Add a command to restart the bot
-  tgpeetees.addBotCommand({
-    name: "restart",
-    callback: startCallback, // Restart the bot using the startCallback function
-  });
-
-  // Handle incoming messages
-  tgpeetees.bot.on("message", async (ctx) => {
-    await ctx.telegram.sendChatAction(ctx.chat.id, "typing");
-
-    const userId = tgpeetees.getUserId(ctx); // Get the user ID from the context
-    const store = await tgpeetees.db.read();
-
-    if (!store.isSessionStart[userId] || !store.chatHistory?.[userId]?.length) {
-      ctx.reply(
-        "Session don't started. Call Start chat session before writing",
-        Markup.inlineKeyboard([
-          {
-            text: "Start Chat Session",
-            callback_data: "START_CHAT_SESSION", // Callback data for starting a chat session
-          },
-        ])
-        // Callback data for help
-      );
-
-      return;
-    }
-    const msg = ctx.message.text; // Get the message text from the context
-
-    const response = await tgpeetees.sendToChatGpt(userId, msg, {
-      temperature: 0.5,
-      max_tokens: 1000,
-    }); // Send the message to ChatGPT and get the response
-
-    if (!response) {
-      ctx.reply(
-        "Session don't started. Call Start session",
-        Markup.inlineKeyboard([
-          {
-            text: "Start Chat Session",
-            callback_data: "START_CHAT_SESSION", // Callback data for starting a chat session
-          },
-        ])
-      );
-      return;
-    }
-
+  const startCallback = (ctx) => {
     ctx.reply(
-      response.choices[0].message.content,
-      Markup.inlineKeyboard([
-        {
-          text: "End Chat Session",
-          callback_data: "END_CHAT_SESSION", // Callback data for starting a chat session
-        },
-      ])
-    ); // Reply with the ChatGPT response
+      "Привіт. Цей бот допоможе тобі текст з будь-якого зображення перекласти на українську. Надійшли посилання на зображення та отримай переклад тексту з нього."
+    );
+  };
+
+  tgpeetees.bot.start(startCallback);
+
+  tgpeetees.bot.on("message", async (ctx) => {
+    tgpeetees.botTyping(ctx);
+    const msg = ctx.message.text;
+    // const userId = tgpeetees.getUserId(ctx);
+
+    if (!msg) {
+      console.log("no msg", ctx.message);
+
+      if (ctx.message.forward_from_chat) {
+        const message = ctx.message;
+        const postUrl = `https://t.me/${message.forward_from_chat.username}/${message.forward_from_message_id}`;
+
+        const res = await axios.get(postUrl);
+
+        const $ = cheerio.load(res.data);
+        const metaImage =
+          $('meta[property="og:image"]').attr("content") ||
+          $('meta[name="twitter:image"]').attr("content") ||
+          $('link[rel="image_src"]').attr("href");
+
+        const response = await tgpeetees.sendToGpt(
+          getMessagesWithImage(metaImage)
+        );
+
+        return ctx.reply(response.content);
+      }
+
+      if (ctx.message?.photo?.length) {
+        console.log("has photo");
+        const fileId = ctx.message.photo[ctx.message.photo.length - 1].file_id;
+
+        const downloadLink = await tgpeetees.bot.telegram.getFileLink(fileId);
+
+        // download image and transform to base64 url
+        console.log("downloadLink", downloadLink);
+        const respImage = await axios({
+          url: downloadLink,
+          method: "GET",
+          responseType: "arraybuffer",
+        });
+
+        const data = respImage.data;
+        const base64String = data.toString("base64");
+
+        const mimeType = "image/jpeg"; // Assuming the file is a JPEG image
+        const base64Url = `data:${mimeType};base64,${base64String}`;
+
+        const response = await tgpeetees.sendToGpt(
+          getMessagesWithImage(base64Url)
+        );
+
+        return ctx.reply(response.content);
+      }
+      return;
+    }
+
+    const isUrl = isURL(msg);
+
+    if (!isUrl) {
+      console.log("is translate text");
+
+      const response = await tgpeetees.sendToGpt(getMessagesWithText(msg));
+
+      ctx.reply(response.content);
+    }
+
+    const isImageUrlLink = await isImageURL(msg);
+
+    if (isImageUrlLink) {
+      console.log("is image url");
+
+      const response = await tgpeetees.sendToGpt(getMessagesWithImage(msg));
+
+      // console.log(response.content);
+
+      ctx.reply(response.content);
+      return;
+    }
+
+    if (!isImageUrlLink && isUrl) {
+      console.log("is url");
+      const previewImage = await getPreviewImage(msg);
+
+      if (previewImage) {
+        const response = await tgpeetees.sendToGpt(
+          getMessagesWithImage(previewImage)
+        );
+
+        ctx.reply(response.content);
+        return;
+      }
+    }
   });
 
-  function startCallback(ctx) {
-    // Callback function to be called when the bot starts
-    const params = {
-      start: {
-        msg: "Hello", // Start message
-        keyboard: [
-          [
-            {
-              text: "Start Chat Session",
-              callback_data: "START_CHAT_SESSION", // Callback data for starting a chat session
-            },
-            {
-              text: "End Chat Session",
-              callback_data: "END_CHAT_SESSION", // Callback data for ending a chat session
-            },
-          ],
-          [{ text: "Help", callback_data: "HELP" }], // Callback data for help
-        ],
-      },
-    };
-    ctx.reply(params.start.msg, Markup.inlineKeyboard(params.start?.keyboard)); // Send the start message with an inline keyboard
-  }
-
-
-  await tgpeetees.init(); // Initialize the bot
+  tgpeetees.init();
 };
 
-main(); // Call the main function to start the bot
+function isURL(string) {
+  const regex = /^(https?:\/\/)?([a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)+)(\/[^\s]*)?$/;
+  return regex.test(string);
+}
+
+const SYSTEM_PROMPT =
+  "Ти профейсійний перекладач тексту на українську мову. Нормалізуй текст який отримаєшь та переклади його";
+
+function getMessagesWithText(msg) {
+  return [
+    {
+      role: "system",
+      content: [
+        {
+          type: "text",
+          text: SYSTEM_PROMPT,
+        },
+      ],
+    },
+    {
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text: msg,
+        },
+      ],
+    },
+  ];
+}
+
+function getMessagesWithImage(msg) {
+  return [
+    {
+      role: "system",
+      content: [
+        {
+          type: "text",
+          text: SYSTEM_PROMPT,
+        },
+      ],
+    },
+    {
+      role: "user",
+      content: [
+        {
+          type: "image_url",
+          image_url: {
+            url: msg,
+          },
+        },
+      ],
+    },
+  ];
+}
+
+async function isImageURL(url) {
+  try {
+    const response = await axios.head(url);
+    const contentType = response.headers["content-type"];
+    return contentType.startsWith("image/");
+  } catch (error) {
+    return false;
+  }
+}
+
+async function getPreviewImage(url) {
+  try {
+    // Проверка, является ли URL изображением
+    const headResponse = await axios.head(url);
+    const contentType = headResponse.headers["content-type"];
+
+    if (contentType.startsWith("image/")) {
+      return url;
+    }
+
+    // Если URL не является изображением, получаем HTML страницы
+    const response = await axios.get(url);
+    const $ = cheerio.load(response.data);
+
+    // Пытаемся найти изображение превью через мета-теги Open Graph или другие теги
+    const metaImage =
+      $('meta[property="og:image"]').attr("content") ||
+      $('meta[name="twitter:image"]').attr("content") ||
+      $('link[rel="image_src"]').attr("href");
+
+    if (metaImage) {
+      return metaImage;
+    } else {
+      return null;
+    }
+  } catch (error) {
+    console.error("Error fetching the URL:", error);
+    return null;
+  }
+}
+
+main();

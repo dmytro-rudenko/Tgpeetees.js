@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Tgpeetees = void 0;
 const telegraf_1 = require("telegraf");
 const openai_1 = __importDefault(require("openai"));
+<<<<<<< HEAD
 const path_1 = __importDefault(require("path"));
 const fs_json_store_1 = require("fs-json-store");
 class Tgpeetees {
@@ -35,11 +36,24 @@ class Tgpeetees {
             file: path_1.default.join(process.cwd(), this.dbName)
         });
         this.bot.start(params.callback);
+=======
+class Tgpeetees {
+    constructor(params) {
+        const { botToken, openaiApiKey, model } = params;
+        this.bot = new telegraf_1.Telegraf(botToken);
+        if (model) {
+            this.model = model;
+        }
+        if (openaiApiKey) {
+            this.addChatGpt(params.openaiApiKey);
+        }
+>>>>>>> fccaf26 (is-working)
     }
     async init() {
         // Enable graceful stop
         process.once("SIGINT", () => this.bot.stop("SIGINT"));
         process.once("SIGTERM", () => this.bot.stop("SIGTERM"));
+<<<<<<< HEAD
         const store = await this.db.read();
         if (!(store === null || store === void 0 ? void 0 : store.isSessionStart) && !(store === null || store === void 0 ? void 0 : store.chatHistory)) {
             await this.db.write({
@@ -47,6 +61,8 @@ class Tgpeetees {
                 isSessionStart: {}
             });
         }
+=======
+>>>>>>> fccaf26 (is-working)
         console.log("Bot started");
         return this.bot.launch();
     }
@@ -61,6 +77,7 @@ class Tgpeetees {
     addBotCommand(command) {
         this.bot.command(command.name, command.callback);
     }
+<<<<<<< HEAD
     async startGptSession(userId, systemMsg) {
         var _a;
         if (!this.openai) {
@@ -102,6 +119,10 @@ class Tgpeetees {
         delete store.chatHistory[userId];
         delete store.isSessionStart[userId];
         await this.db.write(store);
+=======
+    async botTyping(ctx) {
+        await ctx.telegram.sendChatAction(ctx.chat.id, "typing");
+>>>>>>> fccaf26 (is-working)
     }
     getUserId(ctx) {
         var _a;
@@ -109,6 +130,13 @@ class Tgpeetees {
             ? ctx.update.callback_query.from.id
             : ctx.message.from.id;
     }
+<<<<<<< HEAD
+=======
+    async sendToGpt(messages, params) {
+        const response = await this.openai.chat.completions.create(Object.assign({ model: "gpt-4o", temperature: 1, max_tokens: 256, top_p: 1, frequency_penalty: 0, presence_penalty: 0, messages }, params));
+        return response.choices[0].message;
+    }
+>>>>>>> fccaf26 (is-working)
     async addChatGpt(token) {
         this.openai = new openai_1.default({
             apiKey: token
