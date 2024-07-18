@@ -25,13 +25,6 @@ Full example https://github.com/dmytro-rudenko/Tgpeetees.js/tree/main/example
 ### Example
 
 ```javascript
-const { Tgpeetees } = require("tgpeetees");
-const { Markup } = require("telegraf"); // Import the Markup class from telegraf for creating custom keyboards
-const dotenv = require("dotenv"); // Import dotenv for loading environment variables from a .env file
-
-dotenv.config(); // Load environment variables from the .env file
-
-const main = async () => {
 const { Tgpeetees } = require("./index.js"); // Import the Tgpeetees class from the local index file
 const { Markup } = require("telegraf"); // Import the Markup class from telegraf for creating custom keyboards
 const dotenv = require("dotenv"); // Import dotenv for loading environment variables from a .env file
@@ -60,7 +53,12 @@ const main = async () => {
         "Imagine that you're a person who answers everything with poetry. Respond in the language in which the message arrives."
       );
 
-      ctx.reply("Session starts"); // Reply to the user that the session has started
+      ctx.reply("Session starts", Markup.inlineKeyboard([
+        {
+          text: "End Chat Session",
+          callback_data: "END_CHAT_SESSION", // Callback data for starting a chat session
+        },
+      ])); // Reply to the user that the session has started
     },
   });
 
@@ -72,7 +70,12 @@ const main = async () => {
 
       tgpeetees.closeGptSession(userId); // Close the GPT session for the user
 
-      ctx.reply("Session end"); // Reply to the user that the session has ended
+      ctx.reply("Session end", Markup.inlineKeyboard([
+        {
+          text: "Start Chat Session",
+          callback_data: "START_CHAT_SESSION", // Callback data for starting a chat session
+        },
+      ])); // Reply to the user that the session has ended
     },
   });
 
@@ -149,8 +152,6 @@ Hello, for help call /help`; // Help message to be sent to the user
     ); // Reply with the ChatGPT response
   });
 
-  await tgpeetees.init(); // Initialize the bot
-
   function startCallback(ctx) {
     // Callback function to be called when the bot starts
     const params = {
@@ -173,6 +174,9 @@ Hello, for help call /help`; // Help message to be sent to the user
     };
     ctx.reply(params.start.msg, Markup.inlineKeyboard(params.start?.keyboard)); // Send the start message with an inline keyboard
   }
+
+
+  await tgpeetees.init(); // Initialize the bot
 };
 
 main(); // Call the main function to start the bot

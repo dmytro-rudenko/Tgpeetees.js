@@ -94,6 +94,8 @@ export class Tgpeetees {
             throw new Error("OpenAI API key not set");
         }
 
+        this.closeGptSession(userId)
+
         const store = await this.db.read()
 
         if (!store.chatHistory?.[userId]) {
